@@ -1,0 +1,67 @@
+{
+  "name": "police-car",
+  "displayName": "警车",
+  "parts": {
+    "body": {
+      "name": "Cop_Cube.001",
+      "type": "body",
+      "physics": {
+        "mass": 1500,
+        "friction": 0.5,
+        "restitution": 0.2
+      }
+    },
+    "wheels": {
+      "frontLeft": {
+        "name": "Cop_FrontLeftWheel_Cylinder.011",
+        "type": "wheel",
+        "isSteering": true,
+        "physics": {
+          "radius": 0.4,
+          "mass": 20,
+          "friction": 0.8,
+          "suspensionStiffness": 50,
+          "suspensionRestLength": 0.3,
+          "maxSuspensionTravel": 0.3,
+          "maxSuspensionForce": 100000
+        }
+      },
+      "frontRight": {
+        "name": "Cop_FrontRightWheel_Cylinder.012",
+        "type": "wheel",
+        "isSteering": true,
+        "physics": {
+          "radius": 0.4,
+          "mass": 20,
+          "friction": 0.8,
+          "suspensionStiffness": 50,
+          "suspensionRestLength": 0.3,
+          "maxSuspensionTravel": 0.3,
+          "maxSuspensionForce": 100000
+        }
+      },
+      "rear": {
+        "name": "Cop_BackWheels_Cylinder.001",
+        "type": "wheel",
+        "isSteering": false,
+        "physics": {
+          "radius": 0.4,
+          "mass": 20,
+          "friction": 0.8,
+          "suspensionStiffness": 50,
+          "suspensionRestLength": 0.3,
+          "maxSuspensionTravel": 0.3,
+          "maxSuspensionForce": 100000
+        }
+      }
+    }
+  },
+  "vehicle": {
+    "maxSteerVal": 0.3,
+    "maxForce": 2000,
+    "brakeForce": 1000000,
+    "maxSpeed": 250,
+    "acceleration": 10,
+    "deceleration": 5
+  }
+} 

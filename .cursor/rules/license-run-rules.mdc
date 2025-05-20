@@ -1,0 +1,126 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+1. General Principles
+
+    Mobile-First:
+    All features must be designed to work seamlessly on mobile screens. Desktop compatibility is required but mobile UX is the priority.
+
+    Step-by-Step Development:
+    Every commit or feature addition should address only one specific, small functionality at a time.
+
+    Clarity and Maintainability:
+    Code must be clear, modular, and well-commented. Always optimize for readability and reusability.
+
+    Testing:
+    After each feature is added, test both on mobile (touch) and desktop (keyboard) before moving to the next step.
+
+2. Controls & UI
+
+    Virtual Joystick for Mobile:
+    Implement a single, thumb-friendly virtual joystick (preferably using nipplejs or similar).
+
+        Up/Down: Acceleration and braking
+
+        Left/Right: Steering
+        Place the joystick at the lower part of the screen for one-handed use.
+
+    Keyboard for Desktop:
+    WASD or Arrow keys control the car.
+    Q/E or Z/C control left/right turn signals.
+
+    HUD (Heads-Up Display):
+    Always show speed, current score, violation notifications, and turn signal status.
+
+    Responsive Design:
+    Use CSS and JS to adapt layout and controls based on device and orientation.
+
+3. User Authentication
+
+    Login Screen:
+    On first load, require username input or Google login (via Firebase Authentication or similar).
+
+    Session Management:
+    Store user data locally and maintain session until logout.
+
+4. Game Content & Structure
+
+    Third-Person Camera:
+    Camera should follow behind and above the vehicle, mimicking a “kart” or classic driving game perspective.
+
+    Modular Assets:
+    Organize code and assets into clear folders:
+    /src/components/, /assets/models/, /assets/textures/, /src/config/, /src/auth/, etc.
+
+    Character & Car Selection:
+    Allow switching avatars and cars through a clear UI. Each selection should update all relevant visuals and behaviors.
+
+    Scenes & Environment:
+    Start with a single straight road, then incrementally add buildings, intersections, traffic lights, and signs.
+
+5. Driving Logic & Rule Checking
+
+    Basic Car Physics:
+    Use a physics engine (Cannon.js or Ammo.js) for acceleration, steering, collision, and basic handling.
+
+    Turn Signals:
+    Implement visual flashing indicators (on car and HUD) and allow manual control.
+
+    Traffic System:
+    Add traffic lights, signs, and simple AI cars, checking for red light violations, speeding, signal usage, etc.
+
+    Score and Feedback:
+    Real-time feedback and score deductions for each mistake, with results summary at the end.
+
+6. Ads & Monetization
+
+    Ad Slots:
+    Design building walls and billboards with replaceable textures for future ad content.
+
+    Shop/Unlockables:
+    Prepare for user-customizable cars, avatars, or skins, and possible payment integrations.
+
+7. Configuration & Localization
+
+    Config Files:
+    Store game rules, traffic laws, car/character data, and language texts in easily-editable JSON or YAML files.
+
+    Multilingual Support:
+    Plan for easy integration of new languages and region-specific traffic laws.
+
+8. Multiplayer (Future-Proofing)
+
+    Network Code Placeholder:
+    Keep all player state and movement logic modular to allow future WebSocket or P2P sync (e.g., Socket.io or PeerJS).
+
+    Code Comments:
+    Clearly mark future multiplayer extension points.
+
+9. Coding Conventions & Commits
+
+    Naming:
+    Use PascalCase for classes, camelCase for functions/variables.
+    Example: PlayerCar, updateSpeed(), currentScore.
+
+    Comments:
+    Every major function/block should have a brief comment.
+
+    Commit Messages:
+    Use short, descriptive commit messages, e.g.:
+
+    feat: add mobile joystick controls  
+    fix: correct turn signal indicator logic  
+    refactor: modularize traffic light system  
+
+10. Cursor Prompt Guidance
+
+    One Feature at a Time:
+    Clearly state which feature you are working on.
+
+    Always Specify Device/Control Context:
+    e.g., “Implement mobile joystick for driving. Use Three.js and nipplejs. Include clear comments.”
+
+    Ask for Comments:
+    Always request code comments for clarity.
