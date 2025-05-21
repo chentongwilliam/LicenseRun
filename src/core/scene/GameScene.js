@@ -17,7 +17,7 @@ export class GameScene {
     
     // 初始化摄像机
     this.camera = new THREE.PerspectiveCamera(
-      50,
+      75, // 增加视场角，使视野更开阔
       window.innerWidth / window.innerHeight,
       0.1,
       1000
@@ -30,12 +30,12 @@ export class GameScene {
       enabled: false,
       lastX: 0,
       lastY: 0,
-      theta: 0, // 水平角
-      phi: -60 * Math.PI / 180, // 垂直角，初始60度
-      radius: 12, // 摄像机距离
-      targetTheta: 0, // 目标水平角
-      targetPhi: -60 * Math.PI / 180, // 目标垂直角
-      lerpFactor: 0.05 // 视角平滑过渡系数
+      theta: 0,
+      phi: -45 * Math.PI / 180, // 调整初始视角
+      radius: 12, // 改回原来的距离
+      targetTheta: 0,
+      targetPhi: -45 * Math.PI / 180,
+      lerpFactor: 0.1
     }
     
     // 初始化简单车辆
@@ -64,7 +64,6 @@ export class GameScene {
     
     // 开始动画循环
     this.clock = new THREE.Clock()
-    this.animate()
   }
   
   setupLights() {
@@ -224,16 +223,16 @@ export class GameScene {
     }
   }
   
-  animate() {
-    requestAnimationFrame(this.animate.bind(this))
-    
-    const deltaTime = this.clock.getDelta()
+  update() {
+    const delta = this.clock.getDelta()
     
     // 处理输入
     this.handleInput()
     
     // 更新车辆
-    this.simpleCar.update(deltaTime)
+    if (this.simpleCar) {
+      this.simpleCar.update(delta)
+    }
     
     // 更新摄像机
     this.updateCamera()

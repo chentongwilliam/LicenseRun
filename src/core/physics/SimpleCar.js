@@ -31,6 +31,12 @@ export class SimpleCar {
         this.isReversing = false; // 是否倒车
         this.isBraking = false; // 是否在刹车
         this.taillights = []; // 存储尾灯对象的数组
+        this.cannonballs = []; // 存储所有炮弹
+        this.lastFireTime = 0; // 上次发射时间
+        this.fireInterval = 0.1; // 发射间隔（秒）
+        this.cannonballSpeed = 100; // 炮弹初始速度
+        this.cannonballRadius = 0.2; // 炮弹半径
+        this.gravity = 9.8; // 重力加速度
     }
 
     // 添加一个方法来重新加载配置
@@ -249,6 +255,30 @@ export class SimpleCar {
         if (p.z > this.groundLimit) { p.z = this.groundLimit; hit = true; }
         if (hit) this.speed = 0;
         
+        // 更新所有炮弹的位置
+        for (let i = this.cannonballs.length - 1; i >= 0; i--) {
+            const cannonball = this.cannonballs[i];
+            const currentTime = performance.now() / 1000;
+            const timeElapsed = currentTime - cannonball.userData.initialTime;
+
+            // 更新炮弹位置（考虑重力和初始速度）
+            // 水平方向：匀速运动
+            cannonball.position.x = cannonball.userData.initialPosition.x + 
+                cannonball.userData.velocity.x * timeElapsed;
+            cannonball.position.z = cannonball.userData.initialPosition.z + 
+                cannonball.userData.velocity.z * timeElapsed;
+            
+            // 垂直方向：考虑重力影响
+            // 使用物理公式：h = h0 + v0*t + 0.5*g*t^2
+            cannonball.position.y = cannonball.userData.initialPosition.y - 
+                0.5 * this.gravity * timeElapsed * timeElapsed;
+
+            // 如果炮弹落到地面以下，则移除
+            if (cannonball.position.y < -1) {
+                this.scene.remove(cannonball);
+                this.cannonballs.splice(i, 1);
+            }
+        }
     }
 
     setSteering(value) {
@@ -314,5 +344,60 @@ export class SimpleCar {
             this.car.remove(this.car.children[0]);
         }
         this.createCar();
+    }
+
+    // 发射炮弹
+    fireCannonball() {
+        const currentTime = performance.now() / 1000; // 转换为秒
+        if (currentTime - this.lastFireTime < this.fireInterval) {
+            return; // 如果距离上次发射时间不足，则不发射
+        }
+        this.lastFireTime = currentTime;
+
+        // 创建炮弹几何体
+        const geometry = new THREE.SphereGeometry(this.cannonballRadius, 32, 32);
+        const material = new THREE.MeshPhongMaterial({ color: 0x000000 });
+
+        // 获取车头灯的位置
+        const headlightPositions = [];
+        if (Array.isArray(this.config.headlight)) {
+            this.config.headlight.forEach(cfg => {
+                // 将车头灯的局部坐标转换为世界坐标
+                const position = new THREE.Vector3(...cfg.position);
+                position.applyMatrix4(this.car.matrixWorld);
+                headlightPositions.push(position);
+            });
+        }
+
+        // 如果没有找到车头灯，使用默认位置
+        if (headlightPositions.length === 0) {
+            const defaultPosition = this.car.position.clone();
+            defaultPosition.y += 0.5;
+            headlightPositions.push(defaultPosition);
+        }
+
+        // 从每个车头灯发射炮弹
+        headlightPositions.forEach(headlightPosition => {
+            const cannonball = new THREE.Mesh(geometry, material);
+
+            // 计算发射方向（基于车辆当前朝向）
+            const direction = new THREE.Vector3(
+                Math.sin(this.car.rotation.y),
+                0, // 初始垂直速度为0，让重力影响它
+                Math.cos(this.car.rotation.y)
+            ).normalize();
+
+            // 设置炮弹初始位置和速度
+            cannonball.position.copy(headlightPosition);
+            cannonball.userData = {
+                velocity: direction.multiplyScalar(this.cannonballSpeed),
+                initialTime: currentTime,
+                initialPosition: headlightPosition.clone()
+            };
+
+            // 添加到场景和炮弹数组
+            this.scene.add(cannonball);
+            this.cannonballs.push(cannonball);
+        });
     }
 } 

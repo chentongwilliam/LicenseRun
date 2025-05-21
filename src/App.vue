@@ -22,8 +22,6 @@
       </div>
       <!-- 添加视角控制按钮 -->
       <div class="camera-controls">
-        <button @click="rotateCameraLeft">←</button>
-        <button @click="rotateCameraRight">→</button>
         <button @click="zoomCameraIn">+</button>
         <button @click="zoomCameraOut">-</button>
       </div>
@@ -32,11 +30,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import * as THREE from 'three'
 import * as CANNON from 'cannon-es'
 import nipplejs from 'nipplejs'
 import { GameScene } from './core/scene/GameScene'
+import { GameControls } from './core/controls/GameControls'
 
 // 游戏状态
 const speed = ref(0)
@@ -52,6 +51,7 @@ const steerValue = ref(0)
 
 // 游戏场景实例
 let gameScene = null
+let gameControls = null
 let joystick = null
 let frameCount = 0
 let lastFpsUpdate = performance.now()
@@ -259,41 +259,49 @@ const handleKeyUp = (event) => {
   // key event in gameScene
 }
 
-// 初始化游戏场景
-const initGameScene = () => {
+// 初始化游戏
+const initGame = () => {
   const container = document.getElementById('game-canvas')
-  console.log('Initializing game scene')
-  gameScene = new GameScene(container)
+  if (!container) {
+    console.error('Game canvas container not found')
+    return
+  }
   
-  // 每帧刷新速度显示
-  if (speedInterval) clearInterval(speedInterval)
-  speedInterval = setInterval(() => {
-    if (gameScene && gameScene.simpleCar) {
-      // 速度带正负，倒车为负
-      const v = gameScene.simpleCar.speed * 3.6
-      const roundedSpeed = Math.round(v)
-      if (roundedSpeed !== speed.value) {
-        // console.log('Speed updated:', roundedSpeed, 'km/h')
-        speed.value = roundedSpeed
+  gameScene = new GameScene(container)
+  gameControls = new GameControls(gameScene.simpleCar)
+  
+  // 开始游戏循环
+  const gameLoop = () => {
+    if (gameScene) {
+      gameScene.update()
+      gameControls.update()
+      
+      // 更新速度显示
+      if (gameScene.simpleCar) {
+        speed.value = Math.abs(Math.round(gameScene.simpleCar.getSpeedKmh()))
+        steeringAngle.value = Math.round(gameScene.simpleCar.steeringAngle * 180 / Math.PI)
       }
-      // 更新转向角度显示
-      const angle = Math.round(gameScene.simpleCar.steeringAngle * 180 / Math.PI)
-      steeringAngle.value = angle
     }
-  }, 50)
+    requestAnimationFrame(gameLoop)
+  }
+  gameLoop()
 }
 
 // 生命周期钩子
 onMounted(() => {
   console.log('Component mounted')
   checkDevice()
-  initGameScene()
   
-  // 延迟初始化摇杆，确保DOM已经渲染
-  setTimeout(() => {
-    console.log('Initializing joystick')
-    initJoystick()
-  }, 100)
+  // 等待DOM渲染完成后再初始化游戏
+  nextTick(() => {
+    initGame()
+    
+    // 延迟初始化摇杆，确保DOM已经渲染
+    setTimeout(() => {
+      console.log('Initializing joystick')
+      initJoystick()
+    }, 100)
+  })
   
   // 添加键盘事件监听
   console.log('Adding keyboard event listeners')
