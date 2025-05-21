@@ -217,7 +217,7 @@ export class GameScene {
       if (this.keys['w'] || this.keys['arrowup']) {
         this.simpleCar.setWheelRotation(wheelRotationSpeed);
       } else if (this.keys['s'] || this.keys['arrowdown']) {
-        this.simpleCar.setWheelRotation(-wheelRotationSpeed);
+        this.simpleCar.setWheelRotation(-wheelRotationSpeed / 2);
       } else {
         this.simpleCar.setWheelRotation(0);
       }

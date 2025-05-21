@@ -1,73 +1,13 @@
 import * as THREE from 'three';
+import defaultConfig from './CarConfig.sample.json';
 
 export class SimpleCar {
     // 1. Add a defaultConfig static property for fallback
-    static defaultConfig = {
-        name: "PixelCar",
-        body: {
-            size: [1.5, 0.7, 4],
-            position: [0, 0.75, 0],
-            color: "#3ec6f3"
-        },
-        chassis: {
-            size: [2.2, 0.5, 2],
-            position: [0, 0.6, 0],
-            color: "#3ec6f3"
-        },
-        arch: [
-            { size: [0.7, 0.1, 0.9], position: [-0.75, 0.85, 1.5], color: "#3ec6f3" },
-            { size: [0.7, 0.1, 0.9], position: [0.75, 0.85, 1.5], color: "#3ec6f3" },
-            { size: [0.7, 0.1, 0.9], position: [-0.75, 0.85, -1.5], color: "#3ec6f3" },
-            { size: [0.7, 0.1, 0.9], position: [0.75, 0.85, -1.5], color: "#3ec6f3" }
-        ],
-        roof: {
-            size: [1.6, 0.6, 3],
-            position: [0, 1.3, -0.5],
-            color: "#3ec6f3"
-        },
-        hood: {
-            size: [1, 0.4, 0.2],
-            position: [0, 0.55, 1.55],
-            color: "#3ec6f3"
-        },
-        trunk: {
-            size: [2.2, 0.4, 0.2],
-            position: [0, 0.6, -2],
-            color: "#3ec6f3"
-        },
-        bumpers: [
-            { size: [2.3, 0.25, 0.3], position: [0, 0.38, 2.1], color: "#e0e0e0" },
-            { size: [2.3, 0.25, 0.3], position: [0, 0.38, -2.15], color: "#e0e0e0" }
-        ],
-        wheel: {
-            radius: 0.4,
-            width: 0.3,
-            color: "#222222"
-        },
-        headlight: [
-            { radius: 0.15, height: 0.08, position: [-0.5, 0.65, 2.18], color: "#ffe066" },
-            { radius: 0.15, height: 0.08, position: [0.5, 0.65, 2.18], color: "#ffe066" }
-        ],
-        taillight: [
-            { size: [0.18, 0.18, 0.08], position: [-0.5, 0.65, -2.18], color: "#ffa500" },
-            { size: [0.18, 0.18, 0.08], position: [0.5, 0.65, -2.18], color: "#ffa500" }
-        ],
-        window: [
-            { size: [0.04, 0.45, 0.8], position: [-0.81, 1.25, 0.3], color: "#222a3a", opacity: 0.7 },
-            { size: [0.04, 0.45, 1.2], position: [-0.81, 1.25, -1], color: "#222a3a", opacity: 0.7 },
-            { size: [0.04, 0.45, 0.8], position: [0.81, 1.25, 0.3], color: "#222a3a", opacity: 0.7 },
-            { size: [0.04, 0.45, 1.2], position: [0.81, 1.25, -1], color: "#222a3a", opacity: 0.7 },
-            { size: [1.4, 0.45, 0.04], position: [0, 1.25, 1], color: "#222a3a", opacity: 0.7 },
-            { size: [1.4, 0.3, 0.04], position: [0, 1.35, -2], color: "#222a3a", opacity: 0.7 }
-        ],
-        mirror: [
-            { size: [0.12, 0.2, 0.12], position: [-0.86, 1.2, 1], color: "#888888" },
-            { size: [0.12, 0.2, 0.12], position: [0.86, 1.2, 1], color: "#888888" }
-        ]
-    };
+    static defaultConfig = defaultConfig;
 
     constructor(scene, config = null) {
         this.scene = scene;
+        // 如果提供了config，使用提供的config，否则使用默认配置
         this.config = config || SimpleCar.defaultConfig;
         this.car = new THREE.Group();
         this.wheels = [];
@@ -78,7 +18,8 @@ export class SimpleCar {
         this.maxSpeed = 12; // 最大速度（米/秒）
         this.acceleration = 4; // 加速度
         this.deceleration = 0.001; // 松开油门时减速度
-        this.brakeDeceleration = 10; // 倒车/刹车减速度
+        this.brakeDeceleration = 1; // 倒车/刹车减速度
+        this.brakingDeceleration = 20; // 刹车时的减速度，设置为一个较大的固定值
         this.steeringSpeed = Math.PI * 5; // 降低转向角变化速度，使转向更平滑
         this.maxSteering = Math.PI / 3; // 保持最大转向角45度
         this.wheelBase = 2.5; // 轴距
@@ -88,6 +29,18 @@ export class SimpleCar {
         this.createCar();
         this.scene.add(this.car);
         this.isReversing = false; // 是否倒车
+        this.isBraking = false; // 是否在刹车
+        this.taillights = []; // 存储尾灯对象的数组
+    }
+
+    // 添加一个方法来重新加载配置
+    reloadConfig(config) {
+        this.config = config;
+        // 重新创建车辆
+        while (this.car.children.length > 0) {
+            this.car.remove(this.car.children[0]);
+        }
+        this.createCar();
     }
 
     createCar() {
@@ -216,9 +169,13 @@ export class SimpleCar {
         }
         // 10. Taillights (array, box)
         if (Array.isArray(this.config.taillight)) {
+            this.taillights = []; // 清空尾灯数组
             this.config.taillight.forEach(cfg => {
                 const mesh = createBox({ ...cfg, opacity: 1 });
-                if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+                if (mesh instanceof THREE.Object3D) {
+                    this.car.add(mesh);
+                    this.taillights.push(mesh); // 将尾灯对象添加到数组中
+                }
             });
         }
         // 11. Windows (array, box)
@@ -291,6 +248,7 @@ export class SimpleCar {
         if (p.z < -this.groundLimit) { p.z = -this.groundLimit; hit = true; }
         if (p.z > this.groundLimit) { p.z = this.groundLimit; hit = true; }
         if (hit) this.speed = 0;
+        
     }
 
     setSteering(value) {
@@ -302,34 +260,45 @@ export class SimpleCar {
         // 直接设置轮子旋转速度，让 update 方法处理平滑过渡
         this.wheelRotation = value;
         
-        // console.log('轮子旋转速度:', value);
+        // 判断是否在刹车（当速度不为0且按下与当前运动方向相反的键时）
+        this.isBraking = (Math.abs(this.speed) > 0.01) && 
+            ((this.speed > 0 && value < 0) || (this.speed < 0 && value > 0));
+        
         // 根据轮子旋转速度计算加速度
         const accelerationFactor = Math.abs(value) * this.acceleration;
         
         // 正常前进
         if (value > 0) {
-            this.isReversing = false;
-            this.speed += accelerationFactor * 0.016;
-            this.speed = Math.min(this.maxSpeed, this.speed);
-            // console.log('前进速度:', this.speed);
+            // 如果正在倒车，先减速到0
+            if (this.speed < -0.01) {
+                // 如果在刹车状态，使用更大的减速度
+                const currentDeceleration = this.isBraking ? this.brakingDeceleration : this.brakeDeceleration;
+                this.speed += currentDeceleration * 0.016;
+                if (this.speed > 0) this.speed = 0;
+            }
+            // 速度接近0时，开始前进
+            else if (this.speed >= -0.01) {
+                this.isReversing = false;
+                this.speed += accelerationFactor * 0.016;
+                this.speed = Math.min(this.maxSpeed, this.speed);
+            }
         }
-        // 倒车逻辑
+        // 倒车或刹车逻辑
         else if (value <= 0) {
             // 如果速度为正（向前），先减速到0
             if (this.speed > 0.01) {
-                this.speed -= this.brakeDeceleration * 0.016;
+                // 如果在刹车状态，使用更大的减速度
+                const currentDeceleration = this.isBraking ? this.brakingDeceleration : this.brakeDeceleration;
+                this.speed -= currentDeceleration * 0.016;
                 if (this.speed < 0) this.speed = 0;
-                // console.log('减速速度:', this.speed);
             }
             // 速度接近0时，开始倒车
-            else if (this.speed <= 0.01) {  // 修改判断条件
+            else if (this.speed <= 0.01) {
                 this.isReversing = true;
                 this.speed -= accelerationFactor * 0.016;
-                this.speed = Math.max(-this.maxSpeed / 2, this.speed); // 倒车最大速度一半
-                // console.log('倒车速度:', this.speed);
+                this.speed = Math.max(-this.maxSpeed / 3, this.speed);
             }
         }
-        // 松开时不加速，让 update 方法处理减速
     }
 
     getSpeedKmh() {

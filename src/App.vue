@@ -200,7 +200,7 @@ const initJoystick = () => {
         throttleValue = -Math.pow(Math.abs(y), 1.5) * 4.0
       } else {
         // 后退（y为正值）- 使用二次函数使减速更平滑
-        throttleValue = Math.pow(y, 1.5) * 4.0
+        throttleValue = Math.pow(y, 1.5) * 2.0
       }
       
       // 应用油门值
