@@ -1,8 +1,74 @@
 import * as THREE from 'three';
 
 export class SimpleCar {
-    constructor(scene) {
+    // 1. Add a defaultConfig static property for fallback
+    static defaultConfig = {
+        name: "PixelCar",
+        body: {
+            size: [1.5, 0.7, 4],
+            position: [0, 0.75, 0],
+            color: "#3ec6f3"
+        },
+        chassis: {
+            size: [2.2, 0.5, 2],
+            position: [0, 0.6, 0],
+            color: "#3ec6f3"
+        },
+        arch: [
+            { size: [0.7, 0.1, 0.9], position: [-0.75, 0.85, 1.5], color: "#3ec6f3" },
+            { size: [0.7, 0.1, 0.9], position: [0.75, 0.85, 1.5], color: "#3ec6f3" },
+            { size: [0.7, 0.1, 0.9], position: [-0.75, 0.85, -1.5], color: "#3ec6f3" },
+            { size: [0.7, 0.1, 0.9], position: [0.75, 0.85, -1.5], color: "#3ec6f3" }
+        ],
+        roof: {
+            size: [1.6, 0.6, 3],
+            position: [0, 1.3, -0.5],
+            color: "#3ec6f3"
+        },
+        hood: {
+            size: [1, 0.4, 0.2],
+            position: [0, 0.55, 1.55],
+            color: "#3ec6f3"
+        },
+        trunk: {
+            size: [2.2, 0.4, 0.2],
+            position: [0, 0.6, -2],
+            color: "#3ec6f3"
+        },
+        bumpers: [
+            { size: [2.3, 0.25, 0.3], position: [0, 0.38, 2.1], color: "#e0e0e0" },
+            { size: [2.3, 0.25, 0.3], position: [0, 0.38, -2.15], color: "#e0e0e0" }
+        ],
+        wheel: {
+            radius: 0.4,
+            width: 0.3,
+            color: "#222222"
+        },
+        headlight: [
+            { radius: 0.15, height: 0.08, position: [-0.5, 0.65, 2.18], color: "#ffe066" },
+            { radius: 0.15, height: 0.08, position: [0.5, 0.65, 2.18], color: "#ffe066" }
+        ],
+        taillight: [
+            { size: [0.18, 0.18, 0.08], position: [-0.5, 0.65, -2.18], color: "#ffa500" },
+            { size: [0.18, 0.18, 0.08], position: [0.5, 0.65, -2.18], color: "#ffa500" }
+        ],
+        window: [
+            { size: [0.04, 0.45, 0.8], position: [-0.81, 1.25, 0.3], color: "#222a3a", opacity: 0.7 },
+            { size: [0.04, 0.45, 1.2], position: [-0.81, 1.25, -1], color: "#222a3a", opacity: 0.7 },
+            { size: [0.04, 0.45, 0.8], position: [0.81, 1.25, 0.3], color: "#222a3a", opacity: 0.7 },
+            { size: [0.04, 0.45, 1.2], position: [0.81, 1.25, -1], color: "#222a3a", opacity: 0.7 },
+            { size: [1.4, 0.45, 0.04], position: [0, 1.25, 1], color: "#222a3a", opacity: 0.7 },
+            { size: [1.4, 0.3, 0.04], position: [0, 1.35, -2], color: "#222a3a", opacity: 0.7 }
+        ],
+        mirror: [
+            { size: [0.12, 0.2, 0.12], position: [-0.86, 1.2, 1], color: "#888888" },
+            { size: [0.12, 0.2, 0.12], position: [0.86, 1.2, 1], color: "#888888" }
+        ]
+    };
+
+    constructor(scene, config = null) {
         this.scene = scene;
+        this.config = config || SimpleCar.defaultConfig;
         this.car = new THREE.Group();
         this.wheels = [];
         this.steeringAngle = 0; // 当前前轮转向角
@@ -25,64 +91,150 @@ export class SimpleCar {
     }
 
     createCar() {
-        // 车身高度0.5，轮子半径0.4，车身底部应在y=0.4
-        const bodyGeometry = new THREE.BoxGeometry(2, 0.5, 4);
-        const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
-        this.body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        this.body.castShadow = true;
-        this.body.receiveShadow = true;
-        this.body.position.y = 0.4 + 0.5 / 2; // 车身底部贴在轮子上
-        this.car.add(this.body);
-
-        // 轮子参数
-        const wheelRadius = 0.4;
-        const wheelWidth = 0.2;
-        const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 32);
-        const wheelMaterial = new THREE.MeshPhongMaterial({ color: 0x222222 });
-
-        // 前轮用Group包裹，便于转向
-        this.frontLeftGroup = new THREE.Group();
-        this.frontRightGroup = new THREE.Group();
-
-        // 前左轮
-        const frontLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        frontLeftWheel.rotation.z = Math.PI / 2;
-        frontLeftWheel.position.set(0, 0, 0);
-        frontLeftWheel.castShadow = true;
-        frontLeftWheel.receiveShadow = true;
-        this.frontLeftGroup.add(frontLeftWheel);
-        this.frontLeftGroup.position.set(-1, wheelRadius, 1.5);
-        this.car.add(this.frontLeftGroup);
-
-        // 前右轮
-        const frontRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        frontRightWheel.rotation.z = Math.PI / 2;
-        frontRightWheel.position.set(0, 0, 0);
-        frontRightWheel.castShadow = true;
-        frontRightWheel.receiveShadow = true;
-        this.frontRightGroup.add(frontRightWheel);
-        this.frontRightGroup.position.set(1, wheelRadius, 1.5);
-        this.car.add(this.frontRightGroup);
-
-        // 后左轮
-        const rearLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        rearLeftWheel.rotation.z = Math.PI / 2;
-        rearLeftWheel.position.set(-1, wheelRadius, -1.5);
-        rearLeftWheel.castShadow = true;
-        rearLeftWheel.receiveShadow = true;
-        this.car.add(rearLeftWheel);
-
-        // 后右轮
-        const rearRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
-        rearRightWheel.rotation.z = Math.PI / 2;
-        rearRightWheel.position.set(1, wheelRadius, -1.5);
-        rearRightWheel.castShadow = true;
-        rearRightWheel.receiveShadow = true;
-        this.car.add(rearRightWheel);
-
-        // 记录轮子，便于动画
-        this.wheels = [frontLeftWheel, frontRightWheel, rearLeftWheel, rearRightWheel];
-        this.frontWheels = [this.frontLeftGroup, this.frontRightGroup];
+        // Remove old car parts if re-creating
+        while (this.car.children.length > 0) {
+            this.car.remove(this.car.children[0]);
+        }
+        // Helper: create a box mesh from config
+        const createBox = (cfg) => {
+            if (!cfg.size) {
+                console.warn('Box config missing size:', cfg);
+                return null;
+            }
+            const geo = new THREE.BoxGeometry(...cfg.size);
+            const mat = new THREE.MeshPhongMaterial({ color: cfg.color, transparent: !!cfg.opacity, opacity: cfg.opacity ?? 1 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(...cfg.position);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        };
+        // Helper: create a cylinder mesh from config
+        const createCylinder = (cfg, axis = 'x') => {
+            const geo = new THREE.CylinderGeometry(cfg.radius, cfg.radius, cfg.height, 32);
+            const mat = new THREE.MeshPhongMaterial({ color: cfg.color, transparent: !!cfg.opacity, opacity: cfg.opacity ?? 1 });
+            const mesh = new THREE.Mesh(geo, mat);
+            if (axis === 'x') mesh.rotation.x = Math.PI / 2;
+            if (cfg.position) mesh.position.set(...cfg.position);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            return mesh;
+        };
+        // 1. Body
+        if (this.config.body) {
+            const body = createBox(this.config.body);
+            this.body = body;
+            this.car.add(body);
+        }
+        // 2. Chassis
+        if (this.config.chassis) {
+            const chassis = createBox(this.config.chassis);
+            this.chassis = chassis;
+            this.car.add(chassis);
+        }
+        // 3. Arch (array)
+        if (Array.isArray(this.config.arch)) {
+            this.config.arch.forEach(cfg => {
+                const mesh = createBox(cfg);
+                if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+            });
+        }
+        // 4. Roof
+        if (this.config.roof) {
+            const mesh = createBox(this.config.roof);
+            if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+        }
+        // 5. Hood
+        if (this.config.hood) {
+            const mesh = createBox(this.config.hood);
+            if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+        }
+        // 6. Trunk
+        if (this.config.trunk) {
+            const mesh = createBox(this.config.trunk);
+            if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+        }
+        // 7. Bumpers (array)
+        if (Array.isArray(this.config.bumpers)) {
+            this.config.bumpers.forEach(cfg => {
+                const mesh = createBox(cfg);
+                if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+            });
+        }
+        // 8. Wheels (special: still用原有分组逻辑)
+        if (this.config.wheel) {
+            const wheelRadius = this.config.wheel.radius;
+            const wheelWidth = this.config.wheel.width;
+            const wheelColor = this.config.wheel.color;
+            const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 32);
+            const wheelMaterial = new THREE.MeshPhongMaterial({ color: wheelColor });
+            // Front left wheel (in group for steering)
+            const frontLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            frontLeftWheel.rotation.z = Math.PI / 2;
+            frontLeftWheel.position.set(0, 0, 0); // Local to group
+            frontLeftWheel.castShadow = true;
+            frontLeftWheel.receiveShadow = true;
+            // Front right wheel (in group for steering)
+            const frontRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            frontRightWheel.rotation.z = Math.PI / 2;
+            frontRightWheel.position.set(0, 0, 0); // Local to group
+            frontRightWheel.castShadow = true;
+            frontRightWheel.receiveShadow = true;
+            // Rear left wheel (directly to car)
+            const rearLeftWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            rearLeftWheel.rotation.z = Math.PI / 2;
+            rearLeftWheel.position.set(-1, wheelRadius, -1.5);
+            rearLeftWheel.castShadow = true;
+            rearLeftWheel.receiveShadow = true;
+            this.car.add(rearLeftWheel);
+            // Rear right wheel (directly to car)
+            const rearRightWheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
+            rearRightWheel.rotation.z = Math.PI / 2;
+            rearRightWheel.position.set(1, wheelRadius, -1.5);
+            rearRightWheel.castShadow = true;
+            rearRightWheel.receiveShadow = true;
+            this.car.add(rearRightWheel);
+            // Front wheels group for steering
+            this.frontLeftGroup = new THREE.Group();
+            this.frontLeftGroup.add(frontLeftWheel);
+            this.frontLeftGroup.position.set(-1, wheelRadius, 1.5);
+            this.car.add(this.frontLeftGroup);
+            this.frontRightGroup = new THREE.Group();
+            this.frontRightGroup.add(frontRightWheel);
+            this.frontRightGroup.position.set(1, wheelRadius, 1.5);
+            this.car.add(this.frontRightGroup);
+            // Wheels array for animation (only mesh, not group)
+            this.wheels = [frontLeftWheel, frontRightWheel, rearLeftWheel, rearRightWheel];
+            this.frontWheels = [this.frontLeftGroup, this.frontRightGroup];
+        }
+        // 9. Headlights (array, cylinder)
+        if (Array.isArray(this.config.headlight)) {
+            this.config.headlight.forEach(cfg => {
+                const mesh = createCylinder(cfg, 'x');
+                if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+            });
+        }
+        // 10. Taillights (array, box)
+        if (Array.isArray(this.config.taillight)) {
+            this.config.taillight.forEach(cfg => {
+                const mesh = createBox({ ...cfg, opacity: 1 });
+                if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+            });
+        }
+        // 11. Windows (array, box)
+        if (Array.isArray(this.config.window)) {
+            this.config.window.forEach(cfg => {
+                const mesh = createBox(cfg);
+                if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+            });
+        }
+        // 12. Mirrors (array, box)
+        if (Array.isArray(this.config.mirror)) {
+            this.config.mirror.forEach(cfg => {
+                const mesh = createBox(cfg);
+                if (mesh instanceof THREE.Object3D) this.car.add(mesh);
+            });
+        }
     }
 
     update(deltaTime) {
@@ -183,5 +335,15 @@ export class SimpleCar {
     getSpeedKmh() {
         // 返回绝对速度，单位km/h
         return Math.abs(this.speed) * 3.6;
+    }
+
+    // 3. Add fromConfig method
+    fromConfig(config) {
+        this.config = config;
+        // Remove old car
+        while (this.car.children.length > 0) {
+            this.car.remove(this.car.children[0]);
+        }
+        this.createCar();
     }
 } 
