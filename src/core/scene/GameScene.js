@@ -17,7 +17,7 @@ export class GameScene {
     
     // 初始化摄像机
     this.camera = new THREE.PerspectiveCamera(
-      75,
+      50,
       window.innerWidth / window.innerHeight,
       0.1,
       1000
@@ -31,8 +31,11 @@ export class GameScene {
       lastX: 0,
       lastY: 0,
       theta: 0, // 水平角
-      phi: 20 * Math.PI / 180, // 垂直角，初始20度
-      radius: 15 // 摄像机距离
+      phi: -60 * Math.PI / 180, // 垂直角，初始60度
+      radius: 12, // 摄像机距离
+      targetTheta: 0, // 目标水平角
+      targetPhi: -60 * Math.PI / 180, // 目标垂直角
+      lerpFactor: 0.05 // 视角平滑过渡系数
     }
     
     // 初始化简单车辆
@@ -123,6 +126,7 @@ export class GameScene {
     // 垂直旋转（绕X轴），限制范围
     this.orbit.phi -= dy * 0.01
     this.orbit.phi = Math.max(10 * Math.PI / 180, Math.min(80 * Math.PI / 180, this.orbit.phi))
+    
   }
 
   onMouseUp() {
@@ -142,8 +146,30 @@ export class GameScene {
   
   updateCamera() {
     if (this.cameraTarget) {
-      // 获取车辆位置
+      // 获取车辆位置和朝向
       const position = this.cameraTarget.position.clone()
+      const carRotation = this.cameraTarget.rotation.y
+      
+      // 根据车辆速度判断前进/后退状态
+      const speed = this.simpleCar.speed
+      const isReversing = speed < -0.1
+      
+      // 计算目标视角
+      if (Math.abs(speed) > 0.1) {
+        // 根据车辆朝向和前进/后退状态计算目标水平角
+        this.orbit.targetTheta = carRotation + (isReversing ? Math.PI : 0)
+        
+        // 根据速度调整垂直角，速度越快视角越高
+        const speedFactor = Math.min(Math.abs(speed) / this.simpleCar.maxSpeed, 1)
+        this.orbit.targetPhi = (-60 + speedFactor * 20) * Math.PI / 180
+      }
+      
+      // 平滑过渡到目标视角
+      this.orbit.theta += (this.orbit.targetTheta - this.orbit.theta) * this.orbit.lerpFactor
+      this.orbit.phi += (this.orbit.targetPhi - this.orbit.phi) * this.orbit.lerpFactor
+      
+      // 限制垂直视角范围
+      this.orbit.phi = Math.max(-80 * Math.PI / 180, Math.min(-60 * Math.PI / 180, this.orbit.phi))
       
       // 计算摄像机位置
       const x = position.x + this.orbit.radius * Math.sin(this.orbit.phi) * Math.sin(this.orbit.theta)
@@ -152,6 +178,7 @@ export class GameScene {
       
       // 平滑移动摄像机
       this.camera.position.lerp(new THREE.Vector3(x, y, z), 0.15)
+      
       // 让摄像机看向车辆
       this.camera.lookAt(position)
     }
@@ -164,28 +191,36 @@ export class GameScene {
   }
   
   handleInput() {
-    const steeringSpeed = 2.0;
-    const wheelRotationSpeed = 5.0;
+    // 检查是否为移动设备
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
     
-    // 处理转向
-    if (this.keys['a']) {
-      this.simpleCar.setSteering(Math.min(this.simpleCar.steeringAngle + steeringSpeed * 0.016, Math.PI / 4));
-    } else if (this.keys['d']) {
-      this.simpleCar.setSteering(Math.max(this.simpleCar.steeringAngle - steeringSpeed * 0.016, -Math.PI / 4));
-    } else {
-      // 自动回正
-      if (this.simpleCar.steeringAngle > 0) {
-        this.simpleCar.setSteering(Math.max(0, this.simpleCar.steeringAngle - steeringSpeed * 0.016));
-      } else if (this.simpleCar.steeringAngle < 0) {
-        this.simpleCar.setSteering(Math.min(0, this.simpleCar.steeringAngle + steeringSpeed * 0.016));
+    // 只在非移动设备上处理键盘输入
+    if (!isMobile) {
+      const steeringSpeed = 0.5;
+      const wheelRotationSpeed = 2.0;
+      
+      // 处理转向
+      if (this.keys['a'] || this.keys['arrowleft']) {
+        this.simpleCar.setSteering(Math.min(this.simpleCar.steeringAngle + steeringSpeed * 0.016, Math.PI / 4));
+      } else if (this.keys['d'] || this.keys['arrowright']) {
+        this.simpleCar.setSteering(Math.max(this.simpleCar.steeringAngle - steeringSpeed * 0.016, -Math.PI / 4));
+      } else {
+        // 自动回正
+        if (this.simpleCar.steeringAngle > 0) {
+          this.simpleCar.setSteering(Math.max(0, this.simpleCar.steeringAngle - steeringSpeed * 0.016));
+        } else if (this.simpleCar.steeringAngle < 0) {
+          this.simpleCar.setSteering(Math.min(0, this.simpleCar.steeringAngle + steeringSpeed * 0.016));
+        }
       }
-    }
-    
-    // 处理轮子旋转
-    if (this.keys['w']) {
-      this.simpleCar.setWheelRotation(wheelRotationSpeed);
-    } else {
-      this.simpleCar.setWheelRotation(0);
+      
+      // 处理轮子旋转
+      if (this.keys['w'] || this.keys['arrowup']) {
+        this.simpleCar.setWheelRotation(wheelRotationSpeed);
+      } else if (this.keys['s'] || this.keys['arrowdown']) {
+        this.simpleCar.setWheelRotation(-wheelRotationSpeed);
+      } else {
+        this.simpleCar.setWheelRotation(0);
+      }
     }
   }
   

@@ -10,11 +10,11 @@ export class SimpleCar {
         this.wheelRotation = 0; // 轮子自转速度
         this.speed = 0; // 车速（米/秒）
         this.maxSpeed = 12; // 最大速度（米/秒）
-        this.acceleration = 8; // 加速度
-        this.deceleration = 6; // 松开油门时减速度
+        this.acceleration = 4; // 加速度
+        this.deceleration = 0.001; // 松开油门时减速度
         this.brakeDeceleration = 10; // 倒车/刹车减速度
-        this.steeringSpeed = Math.PI * 1.2; // 转向角变化速度（越小越平滑）
-        this.maxSteering = Math.PI / 6; // 最大转向角（30度）
+        this.steeringSpeed = Math.PI * 5; // 降低转向角变化速度，使转向更平滑
+        this.maxSteering = Math.PI / 3; // 保持最大转向角45度
         this.wheelBase = 2.5; // 轴距
         this.car.position.set(0, 0, 0);
         this.car.rotation.y = 0;
@@ -142,26 +142,42 @@ export class SimpleCar {
     }
 
     setSteering(value) {
-        // 渐进转向，设置目标角度
+        // 直接设置目标转向角，让 update 方法处理平滑过渡
         this.targetSteering = Math.max(-this.maxSteering, Math.min(this.maxSteering, value));
     }
 
     setWheelRotation(value) {
+        // 直接设置轮子旋转速度，让 update 方法处理平滑过渡
         this.wheelRotation = value;
+        
+        // console.log('轮子旋转速度:', value);
+        // 根据轮子旋转速度计算加速度
+        const accelerationFactor = Math.abs(value) * this.acceleration;
+        
         // 正常前进
         if (value > 0) {
             this.isReversing = false;
-            this.speed += this.acceleration * 0.016;
-            this.speed = Math.max(0, Math.min(this.maxSpeed, this.speed));
+            this.speed += accelerationFactor * 0.016;
+            this.speed = Math.min(this.maxSpeed, this.speed);
+            // console.log('前进速度:', this.speed);
         }
         // 倒车逻辑
-        if (value < 0) {
-            if (Math.abs(this.speed) < 0.01) {
-                this.isReversing = true;
+        else if (value <= 0) {
+            // 如果速度为正（向前），先减速到0
+            if (this.speed > 0.01) {
+                this.speed -= this.brakeDeceleration * 0.016;
+                if (this.speed < 0) this.speed = 0;
+                // console.log('减速速度:', this.speed);
             }
-            // 只有在倒车状态下才允许速度为负
+            // 速度接近0时，开始倒车
+            else if (this.speed <= 0.01) {  // 修改判断条件
+                this.isReversing = true;
+                this.speed -= accelerationFactor * 0.016;
+                this.speed = Math.max(-this.maxSpeed / 2, this.speed); // 倒车最大速度一半
+                // console.log('倒车速度:', this.speed);
+            }
         }
-        // 松开时不加速
+        // 松开时不加速，让 update 方法处理减速
     }
 
     getSpeedKmh() {
