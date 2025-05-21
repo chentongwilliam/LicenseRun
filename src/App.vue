@@ -101,6 +101,17 @@ const zoomCameraOut = () => {
   }
 }
 
+// 更新FPS的函数
+const updateFPS = () => {
+  const currentTime = performance.now()
+  frameCount++
+  if (currentTime - lastFpsUpdate >= 1000) {
+    fps.value = frameCount
+    frameCount = 0
+    lastFpsUpdate = currentTime
+  }
+}
+
 // 初始化虚拟摇杆
 const initJoystick = () => {
   if (!isMobile.value) return
@@ -172,12 +183,7 @@ const initJoystick = () => {
     lastUpdateTime = currentTime
     
     // 更新FPS
-    frameCount++
-    if (currentTime - lastFpsUpdate >= 1000) {
-      fps.value = frameCount
-      frameCount = 0
-      lastFpsUpdate = currentTime
-    }
+    updateFPS()
     
     if (currentJoystickState.active) {
       const { x, y } = currentJoystickState
@@ -275,6 +281,9 @@ const initGame = () => {
     if (gameScene) {
       gameScene.update()
       gameControls.update()
+      
+      // 更新FPS
+      updateFPS()
       
       // 更新速度显示
       if (gameScene.simpleCar) {

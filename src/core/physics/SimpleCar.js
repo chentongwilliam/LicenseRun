@@ -25,7 +25,7 @@ export class SimpleCar {
         this.wheelBase = 2.5; // 轴距
         this.car.position.set(0, 0, 0);
         this.car.rotation.y = 0;
-        this.groundLimit = 49; // 地面边界（正负50内）
+        this.groundLimit = 99; // 修改地面边界为99（正负100米范围内，与200x200米的地面匹配）
         this.createCar();
         this.scene.add(this.car);
         this.isReversing = false; // 是否倒车
@@ -37,6 +37,30 @@ export class SimpleCar {
         this.cannonballSpeed = 100; // 炮弹初始速度
         this.cannonballRadius = 0.2; // 炮弹半径
         this.gravity = 9.8; // 重力加速度
+
+        // 添加帧率平滑处理
+        this.lastUpdateTime = performance.now();
+        this.frameTimeHistory = []; // 存储最近几帧的时间间隔
+        this.maxFrameTimeHistory = 10; // 存储最近10帧的时间间隔
+        this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // 获取平滑的deltaTime
+    getSmoothDeltaTime() {
+        const currentTime = performance.now();
+        const deltaTime = (currentTime - this.lastUpdateTime) / 1000; // 转换为秒
+        this.lastUpdateTime = currentTime;
+
+        // 限制deltaTime的最大值，防止在设备休眠或卡顿时出现大跳跃
+        const maxDeltaTime = 0.1; // 最大100ms
+        const clampedDeltaTime = Math.min(deltaTime, maxDeltaTime);
+
+        // 在移动设备上使用更保守的时间步长
+        if (this.isMobile) {
+            return Math.min(clampedDeltaTime, 0.016); // 限制在16ms以内
+        }
+
+        return clampedDeltaTime;
     }
 
     // 添加一个方法来重新加载配置
@@ -201,8 +225,11 @@ export class SimpleCar {
     }
 
     update(deltaTime) {
+        // 使用平滑的deltaTime
+        const smoothDeltaTime = this.getSmoothDeltaTime();
+
         // 1. 渐进转向
-        const steerDelta = this.steeringSpeed * deltaTime;
+        const steerDelta = this.steeringSpeed * smoothDeltaTime;
         if (this.steeringAngle < this.targetSteering) {
             this.steeringAngle = Math.min(this.steeringAngle + steerDelta, this.targetSteering);
         } else if (this.steeringAngle > this.targetSteering) {
@@ -213,67 +240,77 @@ export class SimpleCar {
         if (Math.abs(this.speed) > 0.01) {
             // 计算转弯半径
             const beta = Math.tan(this.steeringAngle) * this.speed / this.wheelBase;
-            this.car.rotation.y += beta * deltaTime;
+            
+            // 使用更小的角度增量，使转向更平滑
+            const rotationDelta = beta * smoothDeltaTime;
+            this.car.rotation.y += rotationDelta;
+            
             // 计算前进方向
-            const forward = new THREE.Vector3(Math.sin(this.car.rotation.y), 0, Math.cos(this.car.rotation.y));
-            this.car.position.add(forward.multiplyScalar(this.speed * deltaTime));
+            const forward = new THREE.Vector3(
+                Math.sin(this.car.rotation.y),
+                0,
+                Math.cos(this.car.rotation.y)
+            );
+            
+            // 使用更平滑的位置更新
+            const moveDistance = this.speed * smoothDeltaTime;
+            const newPosition = this.car.position.clone().add(
+                forward.multiplyScalar(moveDistance)
+            );
+            
+            // 边界检查
+            if (Math.abs(newPosition.x) <= this.groundLimit && 
+                Math.abs(newPosition.z) <= this.groundLimit) {
+                this.car.position.copy(newPosition);
+            } else {
+                // 如果超出边界，停止移动
+                this.speed = 0;
+            }
         }
+
         // 3. 轮子动画
         // 前轮转向
         this.frontLeftGroup.rotation.y = this.steeringAngle;
         this.frontRightGroup.rotation.y = this.steeringAngle;
+        
         // 所有轮子自转
+        const wheelRotationDelta = this.wheelRotation * smoothDeltaTime;
         this.wheels.forEach(wheel => {
-            wheel.rotation.x += this.wheelRotation * deltaTime;
+            wheel.rotation.x += wheelRotationDelta;
         });
+
         // 4. 简单阻力和倒车逻辑
         if (this.isReversing) {
             if (this.wheelRotation !== 0) {
-                this.speed -= this.acceleration * deltaTime;
-                this.speed = Math.max(-this.maxSpeed / 2, this.speed); // 倒车最大速度一半
+                this.speed -= this.acceleration * smoothDeltaTime;
+                this.speed = Math.max(-this.maxSpeed / 2, this.speed);
             } else {
-                // 松开S时倒车自动减速
                 if (this.speed < -0.01) {
-                    this.speed += this.brakeDeceleration * deltaTime;
+                    this.speed += this.brakeDeceleration * smoothDeltaTime;
                     if (this.speed > 0) this.speed = 0;
                 }
             }
         } else {
             if (Math.abs(this.speed) > 0.01 && this.wheelRotation === 0) {
-                // 松开油门时自动减速
                 const sign = this.speed > 0 ? 1 : -1;
-                this.speed -= sign * this.deceleration * deltaTime;
+                this.speed -= sign * this.deceleration * smoothDeltaTime;
                 if (sign * this.speed < 0) this.speed = 0;
             }
         }
-        // 5. 边界碰撞检测
-        const p = this.car.position;
-        let hit = false;
-        if (p.x < -this.groundLimit) { p.x = -this.groundLimit; hit = true; }
-        if (p.x > this.groundLimit) { p.x = this.groundLimit; hit = true; }
-        if (p.z < -this.groundLimit) { p.z = -this.groundLimit; hit = true; }
-        if (p.z > this.groundLimit) { p.z = this.groundLimit; hit = true; }
-        if (hit) this.speed = 0;
-        
-        // 更新所有炮弹的位置
+
+        // 更新炮弹位置
         for (let i = this.cannonballs.length - 1; i >= 0; i--) {
             const cannonball = this.cannonballs[i];
             const currentTime = performance.now() / 1000;
             const timeElapsed = currentTime - cannonball.userData.initialTime;
 
-            // 更新炮弹位置（考虑重力和初始速度）
-            // 水平方向：匀速运动
             cannonball.position.x = cannonball.userData.initialPosition.x + 
                 cannonball.userData.velocity.x * timeElapsed;
             cannonball.position.z = cannonball.userData.initialPosition.z + 
                 cannonball.userData.velocity.z * timeElapsed;
-            
-            // 垂直方向：考虑重力影响
-            // 使用物理公式：h = h0 + v0*t + 0.5*g*t^2
             cannonball.position.y = cannonball.userData.initialPosition.y - 
                 0.5 * this.gravity * timeElapsed * timeElapsed;
 
-            // 如果炮弹落到地面以下，则移除
             if (cannonball.position.y < -1) {
                 this.scene.remove(cannonball);
                 this.cannonballs.splice(i, 1);
