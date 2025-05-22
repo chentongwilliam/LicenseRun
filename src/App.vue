@@ -16,10 +16,10 @@
     <!-- 移动端控制界面 -->
     <div class="mobile-controls" v-if="isMobile">
       <div id="joystick"></div>
-      <div class="turn-signals">
+      <!-- <div class="turn-signals">
         <button @click="toggleLeftSignal" :class="{ active: leftSignal }">左转</button>
         <button @click="toggleRightSignal" :class="{ active: rightSignal }">右转</button>
-      </div>
+      </div> -->
       <!-- 添加视角控制按钮 -->
       <div class="camera-controls">
         <button @click="zoomCameraIn">+</button>

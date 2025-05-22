@@ -15,7 +15,7 @@ export class SimpleCar {
         this.targetSteering = 0; // 目标转向角
         this.wheelRotation = 0; // 轮子自转速度
         this.speed = 0; // 车速（米/秒）
-        this.maxSpeed = 12; // 最大速度（米/秒）
+        this.maxSpeed = 30; // 最大速度（米/秒）
         this.acceleration = 4; // 加速度
         this.deceleration = 0.001; // 松开油门时减速度
         this.brakeDeceleration = 1; // 倒车/刹车减速度
@@ -25,7 +25,7 @@ export class SimpleCar {
         this.wheelBase = 2.5; // 轴距
         this.car.position.set(0, 0, 0);
         this.car.rotation.y = 0;
-        this.groundLimit = 99; // 修改地面边界为99（正负100米范围内，与200x200米的地面匹配）
+        this.groundLimit = 499; // 修改地面边界为499（正负500米范围内，与1000x1000米的地面匹配）
         this.createCar();
         this.scene.add(this.car);
         this.isReversing = false; // 是否倒车
